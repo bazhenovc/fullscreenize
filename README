@@ -2,3 +2,8 @@ fullscreenize manual
 ======================================================
 Just focus on the desired window and run fullscreenize :)
 It will do the trick.
+
+Also you can run fullscreenize with the --execute switch.
+In this case, fullscreenize will run the application for you.
+For example:
+$ fullscreenize --execute sauerbraten

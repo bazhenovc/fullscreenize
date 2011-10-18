@@ -3,21 +3,11 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-int main()
+void sendFullscreenEvent(Display* display, Window win)
 {
-	Display* display = XOpenDisplay(getenv("DISPLAY"));
-	if (!display)
-	{
-		puts("Failed to open display\n");
-		return -1;
-	}
-
-	Window currentFocus;
-	int revert;
-	XGetInputFocus(display, &currentFocus, &revert);
-
-	if (currentFocus != None && currentFocus != DefaultRootWindow(display))
+	if (win != None && win != DefaultRootWindow(display))
 	{
 		Atom atomFullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", True);
 		Atom atomState = XInternAtom(display, "_NET_WM_STATE", True);
@@ -25,7 +15,7 @@ int main()
 		event.type = ClientMessage;
 		event.serial = 0;
 		event.send_event = True;
-		event.window = currentFocus;
+		event.window = win;
 		event.message_type = atomState;
 		event.format = 32;
 		event.data.l[0] = 1;
@@ -35,6 +25,65 @@ int main()
 				   SubstructureRedirectMask | SubstructureNotifyMask,
 				   (XEvent*)&event);
 		XFlush(display);
+	}
+}
+
+int main(int argC, char** argV)
+{
+	Display* display = XOpenDisplay(getenv("DISPLAY"));
+	if (!display)
+	{
+		puts("Failed to open display\n");
+		return -1;
+	}
+
+	if (argC > 1)
+	{
+		if (argC == 2)
+		{
+			puts("Usage: fullscreenize <command> <argument>\n"
+				 "Or   : fullscreenize");
+			return 1;
+		}
+		else
+		{
+			if (strcmp(argV[1], "--execute") == 0)
+			{
+				pid_t pid = fork();
+				if (pid == 0)
+				{
+					setsid();
+					system(argV[2]);
+					exit(0);
+				}
+				else
+				{
+					puts("fullscreenize: Will send fullscreen after 2 seconds");
+					sleep(2);
+
+					Window currentFocus;
+					int revert;
+					XGetInputFocus(display, &currentFocus, &revert);
+
+					sendFullscreenEvent(display, currentFocus);
+					puts("fullscreenize: Sent fullscreen");
+					_exit(0);
+				}
+			}
+			else
+			{
+				printf("Unknown command: %s\n", argV[1]);
+				return 1;
+			}
+		}
+	}
+	else
+	{
+		Window currentFocus;
+		int revert;
+		XGetInputFocus(display, &currentFocus, &revert);
+
+		sendFullscreenEvent(display, currentFocus);
 	}
 
 	XCloseDisplay(display);
