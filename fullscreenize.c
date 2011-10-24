@@ -28,15 +28,26 @@ void sendFullscreenEvent(Display* display, Window win)
 	}
 }
 
-int main(int argC, char** argV)
+void doFullscreenize()
 {
 	Display* display = XOpenDisplay(getenv("DISPLAY"));
 	if (!display)
 	{
 		puts("Failed to open display\n");
-		return -1;
+		exit(1);
 	}
 
+	Window currentFocus;
+	int revert;
+	XGetInputFocus(display, &currentFocus, &revert);
+
+	sendFullscreenEvent(display, currentFocus);
+
+	XCloseDisplay(display);
+}
+
+int main(int argC, char** argV)
+{
 	if (argC > 1)
 	{
 		if (argC == 2)
@@ -61,13 +72,22 @@ int main(int argC, char** argV)
 					puts("fullscreenize: Will send fullscreen after 2 seconds");
 					sleep(2);
 
-					Window currentFocus;
-					int revert;
-					XGetInputFocus(display, &currentFocus, &revert);
+					doFullscreenize();
 
-					sendFullscreenEvent(display, currentFocus);
 					puts("fullscreenize: Sent fullscreen");
 					_exit(0);
+				}
+			}
+			if (strcmp(argV[1], "--timeout") == 0)
+			{
+				if (argV[2])
+				{
+					int timeout = atoi(argV[2]);
+					sleep(timeout);
+
+					doFullscreenize();
+
+					return 0;
 				}
 			}
 			else
@@ -79,13 +99,8 @@ int main(int argC, char** argV)
 	}
 	else
 	{
-		Window currentFocus;
-		int revert;
-		XGetInputFocus(display, &currentFocus, &revert);
-
-		sendFullscreenEvent(display, currentFocus);
+		doFullscreenize();
 	}
 
-	XCloseDisplay(display);
 	return 0;
 }
